@@ -3,51 +3,48 @@
             [om.next :as om :refer-macros [defui]]
             [om.dom :as dom]))
 
-(def app-state (atom {:count 0}))
+(def app-state
+  (atom
+    {:app/title "Animals"
+     :animals/list
+                [[1 "Ant"] [2 "Antelope"] [3 "Bird"] [4 "Cat"] [5 "Dog"]
+                 [6 "Lion"] [7 "Mouse"] [8 "Monkey"] [9 "Snake"] [10 "Zebra"]]}))
 
-(defn read [{:keys [state] :as env} key params]
+(defmulti read (fn [env key params] key))
+
+(defmethod read :default
+  [{:keys [state] :as env} key params]
   (let [st @state]
     (if-let [[_ value] (find st key)]
       {:value value}
       {:value :not-found})))
 
-(defn mutate [{:keys [state] :as env} key params]
-  (if (= 'increment key)
-    {:value  [:count]
-     :action #(swap! state update-in [:count] inc)}
-    {:value :not-found}))
+(defmethod read :animals/list
+  [{:keys [state] :as env} key {:keys [start end]}]
+  {:value (subvec (:animals/list @state) start end)})
 
-(defui Counter
+(defui AnimalsList
+       static om/IQueryParams
+       (params [this]
+               {:start 0 :end 10})
        static om/IQuery
        (query [this]
-              [:count])
+              '[:app/title (:animals/list {:start ?start :end ?end})])
        Object
        (render [this]
-               (let [{:keys [count]} (om/props this)]
+               (let [{:keys [app/title animals/list]} (om/props this)]
                  (dom/div nil
-                          (dom/span nil (str "Count: " count))
-                          (dom/button
-                            #js {:onClick
-                                 (fn [_] (om/transact! this '[(increment)]))}
-                            "Click me!")))))
+                          (dom/title nil title)
+                          (apply dom/ul nil
+                                 (map
+                                   (fn [[i name]]
+                                     (dom/li nil (str i ". " name)))
+                                   list))))))
 
 (def reconciler
   (om/reconciler
     {:state  app-state
-     :parser (om/parser {:read read :mutate mutate})}))
+     :parser (om/parser {:read read})}))
 
 (om/add-root! reconciler
-              Counter (gdom/getElement "app-counter"))
-
-(defui HelloWorld
-       Object
-       (render [this]
-               (dom/div nil (get (om/props this) :title))))
-
-(def hello (om/factory HelloWorld))
-
-(js/React.render
-  (apply dom/div nil
-         (map #(hello {:title (str "Hello " %)})
-              (range 6)))
-  (gdom/getElement "app"))
+              AnimalsList (gdom/getElement "animals"))
