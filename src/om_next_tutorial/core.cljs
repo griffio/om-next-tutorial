@@ -1,5 +1,6 @@
 (ns om-next-tutorial.core
-  (:require [goog.dom :as gdom]
+  (:require [datascript.core :as dsc]
+            [goog.dom :as gdom]
             [om.next :as om :refer-macros [defui]]
             [om.dom :as dom]))
 
@@ -56,7 +57,7 @@
 (def init-data
   {:list/one [{:name "John" :points 0}
               {:name "Mary" :points 0}
-              {:name "Bob"  :points 0}]
+              {:name "Bob" :points 0}]
    :list/two [{:name "Mary" :points 0 :age 27}
               {:name "Gwen" :points 0}
               {:name "Jeff" :points 0}]})
@@ -158,3 +159,57 @@
 (om/add-root! reconciler
               RootView (gdom/getElement "people"))
 
+
+;;===============================
+;; DataScript
+;;===============================
+
+(def conn (dsc/create-conn {}))
+
+(dsc/transact! conn
+               [{:db/id     -1
+                 :app/title "A title is click bait!"
+                 :app/count 0}])
+
+(defmulti read-dsc om/dispatch)
+
+(defmethod read-dsc :app/counter
+  [{:keys [state selector]} _ _]
+  {:value (dsc/q '[:find [(pull ?e ?selector) ...]
+                   :in $ ?selector
+                   :where [?e :app/title]]
+                 (dsc/db state) selector)})
+
+(defmulti mutate-dsc om/dispatch)
+
+(defmethod mutate-dsc 'app/increment
+  [{:keys [state]} _ entity]
+  {:value  [:app/counter]
+   :action (fn [] (dsc/transact! state
+                                 [(update-in entity [:app/count] inc)]))})
+
+(defui Counter
+       static om/IQuery
+       (query [this]
+              [{:app/counter [:db/id :app/title :app/count]}])
+       Object
+       (render [this]
+               (let [{:keys [app/title app/count] :as entity}
+                     (get-in (om/props this) [:app/counter 0])]
+                 (dom/div nil
+                          (dom/h2 nil title)
+                          (dom/label nil (str "Count: " count))
+                          (dom/button
+                            #js {:onClick
+                                 (fn [_]
+                                   (om/transact! this
+                                                 `[(app/increment ~entity)]))}
+                            "Click me!")))))
+
+(def reconciler-dsc
+  (om/reconciler
+    {:state  conn
+     :parser (om/parser {:read read-dsc :mutate mutate-dsc})}))
+
+(om/add-root! reconciler-dsc
+              Counter (gdom/getElement "app-counter"))
