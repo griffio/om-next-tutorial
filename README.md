@@ -10,3 +10,8 @@ Includes [DataScript-Integration-Tutorial](https://github.com/omcljs/om/wiki/Dat
 ~~~
 rlwrap lein run -m clojure.main script/figwheel.clj
 ~~~
+
+Intellij - Cursive
+
+![Figwheel Idea Cursive](https://raw.githubusercontent.com/griffio/griffio.github.io/master/public/figwheel-idea.png)
+
