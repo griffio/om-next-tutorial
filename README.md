@@ -11,6 +11,12 @@ Includes [DataScript-Integration-Tutorial](https://github.com/omcljs/om/wiki/Dat
 rlwrap lein run -m clojure.main script/figwheel.clj
 ~~~
 
+Clean builds if changing versions
+
+~~~
+cljs.user=> (clean-builds)
+~~~
+
 ---
 
 Browse to http://localhost:3449/
