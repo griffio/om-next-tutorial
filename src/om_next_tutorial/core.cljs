@@ -2,8 +2,10 @@
   (:require [datascript.core :as dsc]
             [cljs.pprint]
             [goog.dom :as gdom]
+            [cognitect.transit :as tt]
             [om.next :as om :refer-macros [defui]]
-            [om.dom :as dom]))
+            [om.dom :as dom])
+  (:import [goog.crypt Sha256]))
 
 (enable-console-print!)
 
@@ -131,15 +133,11 @@
                          (dom/label nil (str name ", points: " points))
                          (dom/button
                            #js {:onClick
-                                (fn [e]
-                                  (om/transact! this
-                                                `[(points/increment ~props)]))}
+                                (fn [e] (om/transact! this `[(points/increment ~props)]))}
                            "+")
                          (dom/button
                            #js {:onClick
-                                (fn [e]
-                                  (om/transact! this
-                                                `[(points/decrement ~props)]))}
+                                (fn [e] (om/transact! this `[(points/decrement ~props)]))}
                            "-")))))
 
 (def person (om/factory Person {:keyfn :name}))
@@ -176,7 +174,6 @@
 
 (om/add-root! reconciler
               RootView (gdom/getElement "people"))
-
 
 ;;===============================
 ;; DataScript
@@ -232,4 +229,78 @@
 (om/add-root! reconciler-dsc
               Counter (gdom/getElement "app-counter"))
 
+
+;;==============================
+;;Dashboard
+;;==============================
+
+(def init-dashboard-data
+  {:dashboard/items
+   [{:id      0 :type :dashboard/post
+     :author  "Laura Smith"
+     :title   "A Post!"
+     :content "Lorem ipsum dolor sit amet, quem atomorum te quo"}
+    {:id      1 :type :dashboard/photo
+     :title   "A Photo!"
+     :image   "photo.jpg"
+     :caption "Lorem ipsum"}
+    {:id      2 :type :dashboard/post
+     :author  "Jim Jacobs"
+     :title   "Another Post!"
+     :content "Lorem ipsum dolor sit amet, quem atomorum te quo"}
+    {:id    3 :type :dashboard/graphic
+     :title "Charts and Stuff!"
+     :image "chart.jpg"}
+    {:id      4 :type :dashboard/post
+     :author  "May Fields"
+     :title   "Yet Another Post!"
+     :content "Lorem ipsum dolor sit amet, quem atomorum te quo"}]})
+
+(defui Post
+       static om/IQuery
+       (query [this]
+              [:id :type :title :author :content]))
+
+(defui Photo
+       static om/IQuery
+       (query [this]
+              [:id :type :title :image :caption]))
+
+(defui Graphic
+       static om/IQuery
+       (query [this]
+              [:id :type :image]))
+
+(defui DashboardItem
+       static om/Ident
+       (ident [this {:keys [id type]}]
+              [type id])
+       static om/IQuery
+       (query [this]
+              (zipmap
+                [:dashboard/post :dashboard/photo :dashboard/graphic]
+                (map #(conj % :favorites)
+                     [(om/get-query Post)
+                      (om/get-query Photo)
+                      (om/get-query Graphic)]))))
+
+(defui Dashboard
+       static om/IQuery
+       (query [this]
+              [{:dashboard/items (om/get-query DashboardItem)}]))
+
+(defmulti read-dashboard om/dispatch)
+
+(defmethod read-dashboard :dashboard/items
+  [{:keys [state ast]} k _]
+  (let [st @state]
+    {:value   (into [] (map #(get-in st %)) (get st k))
+     :dynamic (update-in ast [:sel]
+                         #(->> (for [[k _] %]
+                                 [k [:favorites]])
+                               (into {})))
+     :static  (update-in ast [:sel]
+                         #(->> (for [[k v] %]
+                                 [k (into [] (remove #{:favorites}) v)])
+                               (into {})))}))
 ;;=======================================================
