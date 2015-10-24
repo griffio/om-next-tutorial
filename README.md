@@ -5,7 +5,8 @@ Shows [Quick-Start](https://github.com/omcljs/om/wiki/Quick-Start-%28om.next%29)
 
 "Separation of reads and mutations within application state." 
 
-Includes [DataScript-Integration-Tutorial](https://github.com/omcljs/om/wiki/DataScript-Integration-Tutorial)
+Includes [DataScript-Integration-Tutorial](https://github.com/omcljs/om/wiki/DataScript-Integration-Tutorial),
+[Queries-With-Unions](https://github.com/omcljs/om/wiki/Queries-With-Unions)
 
 ~~~
 rlwrap lein run -m clojure.main script/figwheel.clj
