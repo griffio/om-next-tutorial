@@ -229,7 +229,6 @@
 (om/add-root! reconciler-dsc
               Counter (gdom/getElement "app-counter"))
 
-
 ;;==============================
 ;;Dashboard
 ;;==============================
@@ -358,7 +357,7 @@
 
 (defmulti mutate-dashboard om/dispatch)
 
-  (defmethod mutate-dashboard 'dashboard/favorite
+(defmethod mutate-dashboard 'dashboard/favorite
   [{:keys [state]} k {:keys [ref]}]
   {:action
    (fn []
@@ -366,7 +365,7 @@
 
 (def dashboard-reconciler
   (om/reconciler
-    {:state init-dashboard-data
+    {:state  init-dashboard-data
      :parser (om/parser {:read read-dashboard :mutate mutate-dashboard})}))
 
 (om/add-root! dashboard-reconciler Dashboard (gdom/getElement "dashboard"))
