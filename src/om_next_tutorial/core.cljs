@@ -64,12 +64,12 @@
                                      (dom/li nil (str i ". " name)))
                                    list))))))
 
-(def reconciler
+(def animals-reconciler
   (om/reconciler
     {:state  app-state
      :parser (om/parser {:read read-animals})}))
 
-(om/add-root! reconciler
+(om/add-root! animals-reconciler
               AnimalsList (gdom/getElement "animals"))
 ;;===============================
 ;; People
@@ -133,11 +133,11 @@
                          (dom/label nil (str name ", points: " points))
                          (dom/button
                            #js {:onClick
-                                (fn [e] (om/transact! this `[(points/increment ~props)]))}
+                                (fn [_] (om/transact! this `[(points/increment ~props)]))}
                            "+")
                          (dom/button
                            #js {:onClick
-                                (fn [e] (om/transact! this `[(points/decrement ~props)]))}
+                                (fn [_] (om/transact! this `[(points/decrement ~props)]))}
                            "-")))))
 
 (def person (om/factory Person {:keyfn :name}))
@@ -358,17 +358,15 @@
 
 (defmulti mutate-dashboard om/dispatch)
 
-(defmethod mutate-dashboard 'dashboard/favorite
+  (defmethod mutate-dashboard 'dashboard/favorite
   [{:keys [state]} k {:keys [ref]}]
   {:action
    (fn []
      (swap! state update-in (conj ref :favorites) inc))})
 
-(def reconciler
+(def dashboard-reconciler
   (om/reconciler
     {:state init-dashboard-data
      :parser (om/parser {:read read-dashboard :mutate mutate-dashboard})}))
 
-(om/add-root! reconciler Dashboard (gdom/getElement "dashboard"))
-
-;;=======================================================
+(om/add-root! dashboard-reconciler Dashboard (gdom/getElement "dashboard"))
