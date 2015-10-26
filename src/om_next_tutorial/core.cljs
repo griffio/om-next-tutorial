@@ -4,7 +4,10 @@
             [goog.dom :as gdom]
             [cognitect.transit :as tt]
             [om.next :as om :refer-macros [defui]]
-            [om.dom :as dom])
+            [om.dom :as dom]
+            [clojure.test.check :as tsck]
+            [clojure.test.check.generators :as tgen]
+            [clojure.test.check.properties :as prop])
   (:import [goog.crypt Sha256]))
 
 (enable-console-print!)
@@ -369,3 +372,116 @@
      :parser (om/parser {:read read-dashboard :mutate mutate-dashboard})}))
 
 (om/add-root! dashboard-reconciler Dashboard (gdom/getElement "dashboard"))
+
+;;**********************
+;;People
+;;**********************
+(def init-people-data
+  {:people [{:id 0 :name "Bob" :friends []}
+            {:id 1 :name "Laura" :friends []}
+            {:id 2 :name "Mary" :friends []}]})
+
+(defui Friend
+       static om/Ident
+       (ident [this props]
+              [:person/by-id (:id props)])
+       static om/IQuery
+       (query [this]
+              [:id :name]))
+
+(defui Persona
+       static om/Ident
+       (ident [this props]
+              [:person/by-id (:id props)])
+       static om/IQuery
+       (query [this]
+              [:id :name {:friends (om/get-query Friend)}]))
+
+(defui People
+       static om/IQuery
+       (query [this]
+              [{:people (om/get-query Persona)}]))
+
+
+(defn add-friend [state id friend]
+  (letfn [(add* [friends ref]
+                (cond-> friends
+                        (not (some #{ref} friends)) (conj ref)))]
+    (if-not (= id friend) ;; FIXED
+      (-> state
+          (update-in [:person/by-id id :friends]
+                     add* [:person/by-id friend]))
+      state)))
+
+(defn remove-friend [state id friend]
+  (letfn [(remove* [friends ref]
+                   (cond->> friends
+                            (some #{ref} friends) (into [] (remove #{ref}))))]
+    (-> state
+        (update-in [:person/by-id id :friends]
+                   remove* [:person/by-id friend])
+        (update-in [:person/by-id friend :friends] ;; FIXED
+                   remove* [:person/by-id id]))))
+
+(defmulti read-people om/dispatch)
+
+(defmethod read-people :people
+  [{:keys [state selector] :as env} key _]
+  (let [st @state]
+    (println selector)
+    {:value (om/denormalize selector (get st key) st)}))
+
+(defmulti mutate-people om/dispatch)
+
+(defmethod mutate-people 'friend/add
+  [{:keys [state] :as env} key {:keys [id friend] :as params}]
+  {:action
+   (fn [] (swap! state add-friend id friend))})
+
+(defmethod mutate-people 'friend/remove
+  [{:keys [state] :as env} key {:keys [id friend] :as params}]
+  {:action (fn [] (swap! state remove-friend id friend))})
+
+(def people-app-state
+  (atom (om/normalize People init-data true)))
+
+(def people-parser (om/parser {:read read-people :mutate mutate-people}))
+
+;;***************
+;;Gen tests
+;;***************
+(def gen-tx-add-remove
+  (tgen/vector
+    (tgen/fmap seq
+               (tgen/tuple
+                 (tgen/elements '[friend/add friend/remove])
+                 (tgen/fmap (fn [[n m]] {:id n :friend m})
+                            (tgen/tuple
+                              (tgen/elements [0 1 2])
+                              (tgen/elements [0 1 2])))))))
+
+(defn self-friended? [{:keys [id friends]}]
+  (boolean (some #{id} (map :id friends))))
+
+(defn prop-no-self-friending []
+  (prop/for-all [tx gen-tx-add-remove]
+                (let [parser (om/parser {:read read-people :mutate mutate-people})
+                      state (atom (om/normalize People init-data true))]
+                  (parser {:state state} tx)
+                  (let [ui (parser {:state state} (om/get-query People))]
+                    (not (some self-friended? (:people ui)))))))
+
+(defn friends-consistent? [people]
+  (let [indexed (zipmap (map :id people) people)]
+    (letfn [(consistent? [[id {:keys [friends]}]]
+                         (let [xs (map (comp :friends indexed :id) friends)]
+                           (every? #(some #{id} (map :id %)) xs)))]
+      (every? consistent? indexed))))
+
+(defn prop-friend-consistency []
+  (prop/for-all [tx gen-tx-add-remove]
+                (let [parser (om/parser {:read read-people :mutate mutate-people})
+                      state  (atom (om/normalize People init-data true))]
+                  (parser {:state state} tx)
+                  (let [ui (parser {:state state} (om/get-query People))]
+                    (friends-consistent? (:people ui))))))
