@@ -12,9 +12,9 @@
 
 (enable-console-print!)
 
-;;===============
+;;==========================================
 ;; Hello World - basic stateless component
-;;===============
+;;==========================================
 (defui HelloWorld
        Object
        (render [this]
@@ -26,9 +26,9 @@
   (greetings {:title "Hello World!"})
   (gdom/getElement "greetings"))
 
-;;===============
+;;==========================================
 ;; App State
-;;===============
+;;==========================================
 (def app-state
   (atom
     {:app/title "Animals"
@@ -74,9 +74,9 @@
 
 (om/add-root! animals-reconciler
               AnimalsList (gdom/getElement "animals"))
-;;===============================
-;; People
-;;===============================
+;;==================================================
+;; People/Points
+;;==================================================
 (def init-data
   {:list/one [{:name "Yoda" :points 0 :age 800}
               {:name "Mary" :points 0}
@@ -100,9 +100,9 @@
   [{:keys [state] :as env} key params]
   {:value (get-people state key)})
 
-(defmulti mutate om/dispatch)
+(defmulti mutate-points om/dispatch)
 
-(defmethod mutate 'points/increment
+(defmethod mutate-points 'points/increment
   [{:keys [state]} _ {:keys [name]}]
   {:action
    (fn []
@@ -110,16 +110,13 @@
             [:person/by-name name :points]
             inc))})
 
-(defmethod mutate 'points/decrement
+(defmethod mutate-points 'points/decrement
   [{:keys [state]} _ {:keys [name]}]
   {:action
    (fn []
      (swap! state update-in
             [:person/by-name name :points]
             #(let [n (dec %)] (if (neg? n) 0 n))))})
-
-;; -----------------------------------------------------------------------------
-;; Components
 
 (defui Person
        static om/Ident
@@ -173,7 +170,7 @@
 (def reconciler
   (om/reconciler
     {:state  init-data
-     :parser (om/parser {:read read-people :mutate mutate})}))
+     :parser (om/parser {:read read-people :mutate mutate-points})}))
 
 (om/add-root! reconciler
               RootView (gdom/getElement "people"))
@@ -428,8 +425,7 @@
 (defmethod read-people :people
   [{:keys [state selector] :as env} key _]
   (let [st @state]
-    (println selector)
-    {:value (om/denormalize selector (get st key) st)}))
+    {:value (om/db->tree selector (get st key) st)}))
 
 (defmulti mutate-people om/dispatch)
 
@@ -443,7 +439,7 @@
   {:action (fn [] (swap! state remove-friend id friend))})
 
 (def people-app-state
-  (atom (om/normalize People init-data true)))
+  (atom (om/tree->db People init-people-data true)))
 
 (def people-parser (om/parser {:read read-people :mutate mutate-people}))
 
@@ -466,7 +462,7 @@
 (defn prop-no-self-friending []
   (prop/for-all [tx gen-tx-add-remove]
                 (let [parser (om/parser {:read read-people :mutate mutate-people})
-                      state (atom (om/normalize People init-data true))]
+                      state (atom (om/tree->db People init-people-data true))]
                   (parser {:state state} tx)
                   (let [ui (parser {:state state} (om/get-query People))]
                     (not (some self-friended? (:people ui)))))))
@@ -481,7 +477,7 @@
 (defn prop-friend-consistency []
   (prop/for-all [tx gen-tx-add-remove]
                 (let [parser (om/parser {:read read-people :mutate mutate-people})
-                      state  (atom (om/normalize People init-data true))]
+                      state  (atom (om/tree->db People init-people-data true))]
                   (parser {:state state} tx)
                   (let [ui (parser {:state state} (om/get-query People))]
                     (friends-consistent? (:people ui))))))
