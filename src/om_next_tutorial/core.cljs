@@ -189,11 +189,11 @@
 (defmulti read-dsc om/dispatch)
 
 (defmethod read-dsc :app/counter
-  [{:keys [state selector]} _ _]
+  [{:keys [state query]} _ _]
   {:value (dsc/q '[:find [(pull ?e ?selector) ...]
                    :in $ ?selector
                    :where [?e :app/title]]
-                 (dsc/db state) selector)})
+                 (dsc/db state) query)})
 
 (defmulti mutate-dsc om/dispatch)
 
@@ -279,7 +279,7 @@
                  (dom/div nil
                           (dom/h3 nil (str "Photo: " title))
                           (dom/div nil image)
-                          (dom/p nil "Caption: ")))))
+                          (dom/p nil (str "Caption: " caption))))))
 
 (def photo (om/factory Photo))
 
@@ -423,9 +423,9 @@
 (defmulti read-people om/dispatch)
 
 (defmethod read-people :people
-  [{:keys [state selector] :as env} key _]
+  [{:keys [state query] :as env} key _]
   (let [st @state]
-    {:value (om/db->tree selector (get st key) st)}))
+    {:value (om/db->tree query (get st key) st)}))
 
 (defmulti mutate-people om/dispatch)
 
