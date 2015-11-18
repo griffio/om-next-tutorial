@@ -10,6 +10,8 @@ Includes [DataScript-Integration-Tutorial](https://github.com/omcljs/om/wiki/Dat
 
 [1.0.0-alpha22](https://clojars.org/org.omcljs/om)
 
+![om-next-tutorial](https://raw.githubusercontent.com/griffio/griffio.github.io/master/public/om-next-tutorial.gif)
+
 ~~~
 rlwrap lein run -m clojure.main script/figwheel.clj
 ~~~
