@@ -8,7 +8,7 @@ Shows [Quick-Start](https://github.com/omcljs/om/wiki/Quick-Start-%28om.next%29)
 Includes [DataScript-Integration-Tutorial](https://github.com/omcljs/om/wiki/DataScript-Integration-Tutorial),
 [Queries-With-Unions](https://github.com/omcljs/om/wiki/Queries-With-Unions)
 
-[1.0.0-alpha22](https://clojars.org/org.omcljs/om)
+[1.0.0-alpha23](https://clojars.org/org.omcljs/om)
 
 ![om-next-tutorial](https://raw.githubusercontent.com/griffio/griffio.github.io/master/public/om-next-tutorial.gif)
 
