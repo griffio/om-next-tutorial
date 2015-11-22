@@ -1,6 +1,9 @@
 (ns om-next-tutorial.core
+  (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [datascript.core :as dsc]
+            [clojure.string :as string]
             [cljs.pprint]
+            [cljs.core.async :as async :refer [<! >! put! chan]]
             [goog.dom :as gdom]
             [cognitect.transit :as tt]
             [om.next :as om :refer-macros [defui]]
@@ -8,7 +11,9 @@
             [clojure.test.check :as tsck]
             [clojure.test.check.generators :as tgen]
             [clojure.test.check.properties :as prop])
-  (:import [goog.crypt Sha256]))
+  (:import [goog.crypt Sha256]
+           [goog Uri]
+           [goog.net Jsonp]))
 
 (enable-console-print!)
 
@@ -402,9 +407,9 @@
 
 (defn add-friend [state id friend]
   (letfn [(add* [friends ref]
-                (cond-> friends
-                        (not (some #{ref} friends)) (conj ref)))]
-    (if-not (= id friend) ;; FIXED
+            (cond-> friends
+                    (not (some #{ref} friends)) (conj ref)))]
+    (if-not (= id friend)                                   ;; FIXED
       (-> state
           (update-in [:person/by-id id :friends]
                      add* [:person/by-id friend]))
@@ -412,12 +417,12 @@
 
 (defn remove-friend [state id friend]
   (letfn [(remove* [friends ref]
-                   (cond->> friends
-                            (some #{ref} friends) (into [] (remove #{ref}))))]
+            (cond->> friends
+                     (some #{ref} friends) (into [] (remove #{ref}))))]
     (-> state
         (update-in [:person/by-id id :friends]
                    remove* [:person/by-id friend])
-        (update-in [:person/by-id friend :friends] ;; FIXED
+        (update-in [:person/by-id friend :friends]          ;; FIXED
                    remove* [:person/by-id id]))))
 
 (defmulti read-people om/dispatch)
@@ -443,41 +448,85 @@
 
 (def people-parser (om/parser {:read read-people :mutate mutate-people}))
 
-;;***************
-;;Gen tests
-;;***************
-(def gen-tx-add-remove
-  (tgen/vector
-    (tgen/fmap seq
-               (tgen/tuple
-                 (tgen/elements '[friend/add friend/remove])
-                 (tgen/fmap (fn [[n m]] {:id n :friend m})
-                            (tgen/tuple
-                              (tgen/elements [0 1 2])
-                              (tgen/elements [0 1 2])))))))
+;;
+;;========================================
+;;https://github.com/omcljs/om/wiki/Remote-Synchronization-Tutorial#building-a-simple-auto-completion-widget
+;;========================================
 
-(defn self-friended? [{:keys [id friends]}]
-  (boolean (some #{id} (map :id friends))))
+(def autocomplete-base-url
+  "http://en.wikipedia.org/w/api.php?action=opensearch&format=json&search=")
 
-(defn prop-no-self-friending []
-  (prop/for-all [tx gen-tx-add-remove]
-                (let [parser (om/parser {:read read-people :mutate mutate-people})
-                      state (atom (om/tree->db People init-people-data true))]
-                  (parser {:state state} tx)
-                  (let [ui (parser {:state state} (om/get-query People))]
-                    (not (some self-friended? (:people ui)))))))
+(def send-chan (chan))
 
-(defn friends-consistent? [people]
-  (let [indexed (zipmap (map :id people) people)]
-    (letfn [(consistent? [[id {:keys [friends]}]]
-                         (let [xs (map (comp :friends indexed :id) friends)]
-                           (every? #(some #{id} (map :id %)) xs)))]
-      (every? consistent? indexed))))
+(defn jsonp
+  ([uri] (jsonp (chan) uri))
+  ([c uri]
+   (let [gjsonp (Jsonp. (Uri. uri))]
+     (.send gjsonp nil (fn [val] (put! c val)))
+     c)))
 
-(defn prop-friend-consistency []
-  (prop/for-all [tx gen-tx-add-remove]
-                (let [parser (om/parser {:read read-people :mutate mutate-people})
-                      state  (atom (om/tree->db People init-people-data true))]
-                  (parser {:state state} tx)
-                  (let [ui (parser {:state state} (om/get-query People))]
-                    (friends-consistent? (:people ui))))))
+(defmulti autocomplete-read om/dispatch)
+
+(defmethod autocomplete-read :search/results
+  [{:keys [state ast] :as env} k {:keys [query]}]
+  (merge
+    {:value (get @state k [])}
+    (when-not (and (string/blank? query)
+                   (<= 2 (count query)))
+      {:search-remote ast})))
+
+(defn result-list [results]
+  (println results)
+  (dom/ul #js {:key "result-list"}
+          (map (fn [result] (dom/li nil result)) results)))
+
+(defn search-field [ac query]
+  (dom/input
+    #js {:key   "search-field"
+         :value query
+         :onKeyUp
+                (fn [e]
+                  (om/set-query! ac
+                                 {:params {:query (.. e -target -value)}}))}))
+
+(defui AutoCompletion
+       static om/IQueryParams
+       (params [_]
+               {:query ""})
+       static om/IQuery
+       (query [_]
+              '[(:search/results {:query ?query})])
+       Object
+       [render [this]
+        (let [{:keys [search/results]} (om/props this)]
+          (dom/div nil
+                   (dom/h3 nil "AutoCompletion")
+                   (cond->
+                     [(search-field this (:search-query (om/get-params this)))]
+                     (not (empty? results)) (conj (result-list results)))))])
+
+(defn search-loop [c]
+  (go
+    (loop [[query cb] (<! c)]
+      (let [[_ results] (<! (jsonp (str autocomplete-base-url query)))]
+        (cb {:search/results results})) ;; cb is the om.next callback that is given to merge state back
+      (recur (<! c)))))
+
+(defn send-to-chan [c]
+  (fn [{:keys [search-remote] :as exp} cb]
+    (when search-remote
+      (let [{[search] :children} (om/query->ast search-remote)
+            query (get-in search [:params :query])]
+        (put! c [query cb]))))) ;; cb is the om.next callback that is given to merge state back
+
+(def autocomplete-reconciler
+  (om/reconciler
+    {:state   {:search/results []}
+     :parser  (om/parser {:read autocomplete-read})
+     :send    (send-to-chan send-chan)
+     :remotes [:search-remote]}))
+
+(om/add-root! autocomplete-reconciler AutoCompletion
+              (gdom/getElement "search"))
+
+(search-loop send-chan)
