@@ -1,16 +1,19 @@
 # om-next-tutorial
 om next steps
 
+[1.0.0-alpha23](https://clojars.org/org.omcljs/om)
+
 Shows [Quick-Start](https://github.com/omcljs/om/wiki/Quick-Start-%28om.next%29)
 
 "Separation of reads and mutations within application state." 
 
 Includes
-[DataScript-Integration-Tutorial](https://github.com/omcljs/om/wiki/DataScript-Integration-Tutorial),
-[Queries-With-Unions](https://github.com/omcljs/om/wiki/Queries-With-Unions)
-[Building-a-simple-auto-completion-widget(https://github.com/omcljs/om/wiki/Remote-Synchronization-Tutorial#building-a-simple-auto-completion-widget)
 
-[1.0.0-alpha23](https://clojars.org/org.omcljs/om)
+[DataScript-Integration-Tutorial](https://github.com/omcljs/om/wiki/DataScript-Integration-Tutorial)
+
+[Queries-With-Unions](https://github.com/omcljs/om/wiki/Queries-With-Unions)
+
+[Building-a-simple-auto-completion-widget](https://github.com/omcljs/om/wiki/Remote-Synchronization-Tutorial#building-a-simple-auto-completion-widget)
 
 ![om-next-tutorial](https://raw.githubusercontent.com/griffio/griffio.github.io/master/public/om-next-tutorial.gif)
 
