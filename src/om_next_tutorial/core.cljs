@@ -471,9 +471,7 @@
   [{:keys [state ast] :as env} k {:keys [query]}]
   (merge
     {:value (get @state k [])}
-    (when-not (and (string/blank? query)
-                   (<= 2 (count query)))
-      {:search-remote ast})))
+    (if (not (or (string/blank? query) (< (count query) 3))) {:search-remote ast}))) ;; ast can be customised before leaving the parser
 
 (defn result-list [results]
   (println results)
@@ -509,7 +507,7 @@
   (go
     (loop [[query cb] (<! c)]
       (let [[_ results] (<! (jsonp (str autocomplete-base-url query)))]
-        (cb {:search/results results})) ;; cb is the om.next callback that is given to merge state back
+        (cb {:search/results results}))                     ;; cb is the om.next callback that is given to merge state back
       (recur (<! c)))))
 
 (defn send-to-chan [c]
@@ -517,7 +515,7 @@
     (when search-remote
       (let [{[search] :children} (om/query->ast search-remote)
             query (get-in search [:params :query])]
-        (put! c [query cb]))))) ;; cb is the om.next callback that is given to merge state back
+        (put! c [query cb])))))                             ;; cb is the om.next callback that is given to merge state back
 
 (def autocomplete-reconciler
   (om/reconciler
