@@ -15,6 +15,8 @@ Includes
 
 [Building-a-simple-auto-completion-widget](https://github.com/omcljs/om/wiki/Remote-Synchronization-Tutorial#building-a-simple-auto-completion-widget)
 
+[Thinking-With-Links](https://github.com/omcljs/om/wiki/Thinking-With-Links!)
+
 ![om-next-tutorial](https://raw.githubusercontent.com/griffio/griffio.github.io/master/public/om-next-tutorial.gif)
 
 ~~~

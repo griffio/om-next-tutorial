@@ -528,3 +528,54 @@
               (gdom/getElement "search"))
 
 (search-loop send-chan)
+
+;;;
+;;; Links
+;;;
+
+(def init-items-data
+  {:current-user {:email "an.example@gmail.com"}
+   :items        [{:id 0 :title "Item 0"}
+                  {:id 1 :title "Item 1"}
+                  {:id 2 :title "Item 2"}]})
+
+(defmulti read-items om/dispatch)
+
+(defmethod read-items :items
+  [{:keys [query state]} key _]
+  (let [st @state]
+    {:value (om/db->tree query (get st key) st)}))
+
+(defui Item
+       static om/Ident
+       (ident [_ {:keys [id]}]
+              [:item/by-id id])
+       static om/IQuery
+       (query [_]
+              '[:id :title [:current-user _]])
+       Object
+       (render [this]
+               (let [{:keys [title current-user]} (om/props this)]
+                 (dom/li nil
+                         (dom/div nil title)
+                         (dom/div nil (:email current-user))))))
+
+(def item (om/factory Item))
+
+(defui SomeList
+       static om/IQuery
+       (query [_]
+              [{:items (om/get-query Item)}])
+       Object
+       (render [this]
+               (dom/div nil
+                 (dom/h3 nil "A List!")
+                 (dom/ul nil
+                         (map item (-> this om/props :items))))))
+
+(def items-reconciler
+  (om/reconciler
+    {:state init-items-data
+     :parser (om/parser {:read read-items})}))
+
+(om/add-root! items-reconciler SomeList (gdom/getElement "items"))
