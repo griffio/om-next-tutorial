@@ -483,7 +483,7 @@
   (dom/input
     #js {:key   "search-field"
          :value query ;; doesn't work with onKeyUp
-         :onChange ;; use onChange instead of onKeyUp https://facebook.github.io/react/docs/forms.html
+         :onChange ;; use onChange instead of onKeyUp https://facebook.github.io/react/docs/forms.html, https://facebook.github.io/react/docs/forms.html#controlled-components
                 (fn [e]
                   (om/set-query! ac
                                  {:params {:query (.. e -target -value)}}))}))
