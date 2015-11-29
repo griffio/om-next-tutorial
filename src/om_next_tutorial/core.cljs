@@ -478,10 +478,9 @@
   (dom/ul #js {:key "result-list"}
           (map (fn [result] (dom/li nil result)) results)))
 
-(defn search-field [ac query]
+(defn search-field [ac]
   (dom/input
     #js {:key   "search-field"
-         :value query
          :onKeyUp
                 (fn [e]
                   (om/set-query! ac
@@ -500,7 +499,7 @@
           (dom/div nil
                    (dom/h3 nil "AutoCompletion")
                    (cond->
-                     [(search-field this (:search-query (om/get-params this)))]
+                     [(search-field this)]
                      (not (empty? results)) (conj (result-list results)))))])
 
 (defn search-loop [c]
