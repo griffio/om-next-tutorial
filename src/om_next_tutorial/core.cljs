@@ -482,8 +482,8 @@
   (println query)
   (dom/input
     #js {:key   "search-field"
-         :value query
-         :onInput ;; use onInput instead of onKeyUp which doesn't update text value when query is empty
+         :value query ;; doesn't work with onKeyUp
+         :onChange ;; use onChange instead of onKeyUp https://facebook.github.io/react/docs/forms.html
                 (fn [e]
                   (om/set-query! ac
                                  {:params {:query (.. e -target -value)}}))}))
@@ -498,7 +498,6 @@
        Object
        [render [this]
         (let [{:keys [search/results]} (om/props this)]
-          (println(om/get-params this))
           (dom/div nil
                    (dom/h3 nil "AutoCompletion")
                    (cond->
