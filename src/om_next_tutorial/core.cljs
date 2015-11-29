@@ -478,10 +478,12 @@
   (dom/ul #js {:key "result-list"}
           (map (fn [result] (dom/li nil result)) results)))
 
-(defn search-field [ac]
+(defn search-field [ac query]
+  (println query)
   (dom/input
     #js {:key   "search-field"
-         :onKeyUp
+         :value query
+         :onInput ;; use onInput instead of onKeyUp which doesn't update text value when query is empty
                 (fn [e]
                   (om/set-query! ac
                                  {:params {:query (.. e -target -value)}}))}))
@@ -496,10 +498,11 @@
        Object
        [render [this]
         (let [{:keys [search/results]} (om/props this)]
+          (println(om/get-params this))
           (dom/div nil
                    (dom/h3 nil "AutoCompletion")
                    (cond->
-                     [(search-field this)]
+                     [(search-field this (:query (om/get-params this)))]
                      (not (empty? results)) (conj (result-list results)))))])
 
 (defn search-loop [c]
