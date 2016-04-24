@@ -27,7 +27,7 @@
 
 (def greetings (om/factory HelloWorld))
 
-(js/React.render
+(js/ReactDOM.render
   (greetings {:title "Hello World!"})
   (gdom/getElement "greetings"))
 
@@ -243,22 +243,27 @@
    [{:id      0 :type :dashboard/post
      :author  "Laura Smith"
      :title   "A Post!"
-     :content "Lorem ipsum dolor sit amet, quem atomorum te quo"}
+     :content "Lorem ipsum dolor sit amet, quem atomorum te quo"
+     :favourites 0}
     {:id      1 :type :dashboard/photo
      :title   "A Photo!"
      :image   "photo.jpg"
-     :caption "Lorem ipsum"}
+     :caption "Lorem ipsum"
+     :favourites 0}
     {:id      2 :type :dashboard/post
      :author  "Jim Jacobs"
      :title   "Another Post!"
-     :content "Lorem ipsum dolor sit amet, quem atomorum te quo"}
+     :content "Lorem ipsum dolor sit amet, quem atomorum te quo"
+     :favourites 0}
     {:id    3 :type :dashboard/graphic
      :title "Charts and Stuff!"
-     :image "chart.jpg"}
+     :image "chart.jpg"
+     :favourites 0}
     {:id      4 :type :dashboard/post
      :author  "May Fields"
      :title   "Yet Another Post!"
-     :content "Lorem ipsum dolor sit amet, quem atomorum te quo"}]})
+     :content "Lorem ipsum dolor sit amet, quem atomorum te quo"
+     :favourites 0}]})
 
 (defui Post
        static om/IQuery
@@ -319,10 +324,10 @@
                  (dom/li
                    #js {:style #js {:padding 10 :borderBottom "1px solid black"}}
                    (dom/div nil
-                            (({:dashboard/post    post
-                               :dashboard/photo   photo
-                               :dashboard/graphic graphic} type)
-                              (om/props this)))
+                     (({:dashboard/post    post
+                        :dashboard/photo   photo
+                        :dashboard/graphic graphic} type)
+                      (om/props this)))
                    (dom/div nil
                             (dom/p nil (str "Favourites: " favorites))
                             (dom/button
