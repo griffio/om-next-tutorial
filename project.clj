@@ -5,5 +5,5 @@
                  [datascript "0.13.1"]
                  [org.omcljs/om "1.0.0-alpha44"]
                  [org.clojure/test.check "0.8.2"]
-                 [com.cognitect/transit-cljs "0.8.225"]
-                 [figwheel-sidecar "0.5.4-3" :scope "provided"]])
+                 [com.cognitect/transit-cljs "0.8.239"]
+                 [figwheel-sidecar "0.5.7" :scope "provided"]])
