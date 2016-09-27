@@ -1,7 +1,7 @@
 # om-next-tutorial
 om next steps
 
-[1.0.0-alpha45](https://clojars.org/org.omcljs/om)
+[1.0.0-alpha46](https://clojars.org/org.omcljs/om)
 
 Shows [Quick-Start](https://github.com/omcljs/om/wiki/Quick-Start-%28om.next%29)
 
